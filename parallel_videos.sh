@@ -25,4 +25,4 @@ for file_name in $(ls $IMAGES | sort -n); do
 	files+=" $(basename $file_name)"
 done 
 
-echo $files | parallel --null --bar ./disperse -s ${s_parameter[$s_parameter_index]} -d 1 -c 16 ./${IMAGES}/{/} ./${TRANSFORMED_IMAGES}/{/}
+parallel --null --bar ./disperse -s ${s_parameter[$s_parameter_index]} -d 1 -c 16 ./${IMAGES}/{1} ./${TRANSFORMED_IMAGES}/{1} ::: $files 
