@@ -1,19 +1,44 @@
 #/bin/bash
-# rm psycho/*
-# rm images/*
-# ffmpeg -i psycho_movie.mp4 -vf fps=24 images/movie%d.png
-# echo "Making crazy shit"
-# for ima in images/*; do ./disperse -s 5 -d 5 -c 5 $ima psycho/$(basename $ima); done
+while getopts m:r option
+do
+	case "${option}"
+		in
+		m) MOVIE_FILE=${OPTARG};;
+		r) REMOVE_FILES=${OPTARG};;
+	esac
+done
 
-declare -a regular_expressions=("movie[0-9].png" "movie[1-5][0-9].png" "movie[6-9][0-9].png" "movie1[0-5][0-9].png" "movie1[6-9][0-9].png" "movie2[0-5][0-9].png" "movie2[6-9][0-9].png" "movie3[0-5][0-9].png" "movie3[6-9][0-9].png" "movie4[0-5][0-9].png" "movie4[6-9][0-9].png" "movie5[0-5][0-9].png" "movie5[6-9][0-9].png"
-                )
+if [[ ! -z "$REMOVE_FILES" ]]; then
+	echo "Removing directories"
+	rm -R images
+	rm -R transformed_images
+fi
 
-let regular_expression_index=0;
-for i in $(seq 1 2 20); do
-	find images -name "${regular_expressions[$regular_expression_index]}" -print0 | parallel --null --bar ./disperse -s 5 -d 5 -c 5 images/{/} psycho/psycho_{/}
-	((regular_expression_index++))
-done;
+if [[ -z "$MOVIE_FILE" || ! -f "$MOVIE_FILE" ]]; then
+	echo "Movie file was not provided or dont't exist"
+	exit -1;
+fi
+mkdir -p images
+mkdir -p transformed_images
+IMAGES="images"
+TRANSFORMED_IMAGES="transformed_images"
 
-# echo "Making video"
-# ffmpeg -r 24 -i psycho/movie%d.png -c:v libx264 -pix_fmt yuv420p out.mp4
+function extract_images_from_movie() {
+	ffmpeg -i $MOVIE_FILE -vf fps=24 ./$IMAGES/%d.png
+}
+
+function disperse_images() {
+	echo "Dispersing images"
+
+	bash parallel_videos.sh $IMAGES $TRANSFORMED_IMAGES 50
+}
+
+function make_video() {
+	echo "Making video"
+	ffmpeg -r 24 -i ${TRANSFORMED_IMAGES}/%d.png -c:v libx264 -pix_fmt yuv420p out.mp4
+}
+
+extract_images_from_movie
+disperse_images
+make_video
 
